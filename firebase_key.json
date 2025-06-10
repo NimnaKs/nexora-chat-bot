@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "nexora-chat-bot",
+  "private_key_id": "a95316fdd8854d69bd3cc32f4c2c6eeb5e657550",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDJ0GexWgbRq7UG\n2/LNlotkK+aDn+FILGwLyVvhjiTgxhfePjROsYRI+HjN7g1X5nBWywUANIHC5FWQ\n1/d4ccdL7YTF/5gQNhIotMqp+30iSbs1xgOtA4Iu6AGx+3sWQNVVA7VecN2SbSyR\ncT17rqphQ3KQzPzT4k9DOc/vLVjln42RXcGjC2rCqeO52o0mAsvhxTNRHyt+jY+P\nA4iKl5n4FZq+nSI3hFs86U1mic40LtAYK7vHopNcC1rypFGZ5BVar++5EoBAUatW\ny3gmcwy4u3mfmvCeSDWaJcsphTMe36TLAj+laBE4HcpO02K7Rzd9BcqSSBTLkvBt\nPNZvjH3JAgMBAAECggEAAgS2NXyKHk1VusOzPShog1avHy4mqGAteqMcV/K03JFo\ngdmmgSEJ/3gRxVpPbeIVfoRCBlNPK7FmMWMd694un8hw9OfRJKeKQgrCYbmDZsYF\nY3f0GIvXAqtLB/0RPBiUhOyL99cdhSIT5Ll+UMtIqkawdXrYEjIFBXss6FEyNxq/\nTfJS+NzBZpXxFuEuKt4zNaeiboXl425LaftoDDmEbhaPftL7OzjWjD12IACN6oEw\nEhigVGONbhMzPtOUxZGz7kD3Jqv2JWe6v/VP1gfX/yV5H+LZCzQgIyYcD7s2Mx9U\ndGA2d89cH1lySz+pulYQNs8aIo+c9PLNhHsfVC+krQKBgQD3Ap3gmR0xYvRQLqv2\nhbEpcmJxiKZIHJKe1yFMOrepucAHg9wYVUyVGoKufhYPn7eFUkJwqyTvYxutBZxE\nCwS5hAmfSHWtVu9/9KxQNHPKLpHBGMz0F0St6UYVIoPsActBVTgLNELVR0r/N9++\n6xRNI6JDYceNcH6aXfQsZQRCrQKBgQDRKLKqfMz8fXWvQHpqMpBKVSQJeheOeOxt\n5XjloSCu/qWNLL+mYzFp6xjx1mYSctYrr8vG7Ucyxdd1rHjBsGQN4qvmVe36YeHN\nN7KxZopEuGwvD7uAhmVyV/93RulF+OOMiHFq2qeOG6TixOdBF4HjXPJsUfccXipv\nDHGMDzfnDQKBgQD0vrr/17Z9QLci25u34C/yCUxRgjyAJw+AI1jy1xs0KMCEsbpa\nwennsyTZEEV7pZ2JlEAQswMdzu2VOoHjSaecyZ9fG8S9w+36sswpjE9OfWYeFhy9\nnnCGgSTXvCNKrVxfl7i4IUg3WzSMPSiNWw/6ftxAN5oqItTOz1kow8684QKBgFMk\n3oEvQz1LkjCsbP0yRHGIDt9FjX+xSisVgU2nE5r810qbc0PtQoNcVXotRD4pMEIF\ni/fz8s2YH+JDQW2ddOigJr1Vg1h4+I3fikVDAcv3k+nRUzPwOPuPR5pesfSCz9HZ\nm1xityCilJUguN0DPzrmg+fTXWwFctDaHXkTw6ExAoGAHoUa5e0adaMXAp5QvdeC\nT7HsQUnaC7/a+tZ1ijkGgojUG6XnmpgOEFWzi3+Jn7RBZENCglgOW7+XNGWMv+Jy\ndEN9UveHSMEBED4ozhwcjWz4XdZWS9NFv5BbpG8lHC6RnNJP1ouBGtBfBaLeeeEk\nzN+RmBNYl2q4+QanpSdIEhc=\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@nexora-chat-bot.iam.gserviceaccount.com",
+  "client_id": "101045524155641668709",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40nexora-chat-bot.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
