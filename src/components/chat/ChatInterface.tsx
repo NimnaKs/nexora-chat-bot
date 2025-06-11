@@ -1,9 +1,15 @@
+/* src/components/ChatInterface.tsx */
+
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Mic, MicOff, MessageSquare, Trash2 } from "lucide-react";
 import { ChatMessage } from "../../types";
 import apiService from "../../services/api";
 import { Button } from "../ui/Button";
 import { Card, CardHeader, CardContent } from "../ui/Card";
+
+// Browser SpeechRecognition
+const SpeechRecognition =
+  (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
 export const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -17,56 +23,115 @@ export const ChatInterface: React.FC = () => {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
-    null
-  );
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [isRecognizing, setIsRecognizing] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState("");
 
+  const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-scroll on new message
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Initialize SpeechRecognition
+  useEffect(() => {
+    if (!SpeechRecognition) return;
+
+    const recog = new SpeechRecognition();
+    recog.continuous = true; // Enable continuous recognition
+    recog.interimResults = true; // Enable interim results for real-time display
+    recog.lang = "en-US";
+
+    recog.onstart = () => {
+      setIsRecognizing(true);
+      setInterimTranscript("");
+    };
+
+    recog.onresult = (e: any) => {
+      let finalTranscript = "";
+      let interimText = "";
+
+      for (let i = 0; i < e.results.length; i++) {
+        const transcript = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          finalTranscript += transcript;
+        } else {
+          interimText += transcript;
+        }
+      }
+
+      // Update input value with final transcript
+      if (finalTranscript) {
+        setInputValue((prev) => prev + finalTranscript);
+        setInterimTranscript("");
+      } else {
+        // Show interim results in real-time
+        setInterimTranscript(interimText);
+      }
+    };
+
+    recog.onerror = (err: any) => {
+      console.error("SpeechRecognition error", err);
+      setIsRecognizing(false);
+      setInterimTranscript("");
+    };
+
+    recog.onend = () => {
+      setIsRecognizing(false);
+      setInterimTranscript("");
+    };
+
+    recognitionRef.current = recog;
+  }, []);
+
+  const toggleMic = () => {
+    if (!recognitionRef.current) return;
+
+    if (isRecognizing) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
+    const messageText = inputValue.trim();
+    if (!messageText || isLoading) return;
 
-    const userMessage: ChatMessage = {
+    const userMsg: ChatMessage = {
       id: Date.now().toString(),
       type: "user",
-      content: inputValue,
+      content: messageText,
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMsg]);
     setInputValue("");
+    setInterimTranscript("");
     setIsLoading(true);
 
     try {
-      const response = await apiService.askQuestion(inputValue);
-      const botMessage: ChatMessage = {
+      const res: any = await apiService.askQuestion(userMsg.content);
+      const botMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: "bot",
-        content: response.answer || "Sorry, I couldn't process your question.",
+        content: res.answer || "Sorry, couldn't process.",
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, botMessage]);
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: "bot",
-        content:
-          "Sorry, I encountered an error processing your question. Please try again.",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, botMsg]);
+    } catch (err) {
+      console.error(err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          type: "bot",
+          content: "Error occurred. Please try again.",
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
@@ -80,46 +145,6 @@ export const ChatInterface: React.FC = () => {
     }
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0)
-          setAudioChunks((prev) => [...prev, event.data]);
-      };
-
-      recorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
-        try {
-          const response = await apiService.uploadAudio(
-            new File([audioBlob], "audio.wav")
-          );
-          if (response.text) setInputValue(response.text);
-        } catch (error) {
-          console.error("Failed to convert speech to text:", error);
-        }
-        setAudioChunks([]);
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      recorder.start();
-      setMediaRecorder(recorder);
-      setIsRecording(true);
-    } catch (error) {
-      console.error("Failed to start recording:", error);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-      mediaRecorder.stop();
-      setMediaRecorder(null);
-      setIsRecording(false);
-    }
-  };
-
   const clearChat = () => {
     setMessages([
       {
@@ -130,6 +155,9 @@ export const ChatInterface: React.FC = () => {
       },
     ]);
   };
+
+  // Combined display value for input (actual input + interim transcript)
+  const displayValue = inputValue + interimTranscript;
 
   return (
     <Card className="h-[80vh] flex flex-col">
@@ -158,29 +186,29 @@ export const ChatInterface: React.FC = () => {
         </div>
       </CardHeader>
 
-      <CardContent className="flex flex-col flex-1 p-0 overflow-y-auto">
+      <CardContent className="flex flex-col flex-1 p-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {messages.map((message) => (
+          {messages.map((msg) => (
             <div
-              key={message.id}
+              key={msg.id}
               className={`flex ${
-                message.type === "user" ? "justify-end" : "justify-start"
+                msg.type === "user" ? "justify-end" : "justify-start"
               }`}
             >
               <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                  message.type === "user"
+                className={`${
+                  msg.type === "user"
                     ? "bg-blue-600 text-white rounded-br-md"
                     : "bg-gray-100 text-gray-800 rounded-bl-md"
-                }`}
+                } max-w-xs lg:max-w-md px-4 py-2 rounded-2xl`}
               >
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                <p className="whitespace-pre-wrap">{msg.content}</p>
                 <p
                   className={`text-xs mt-1 ${
-                    message.type === "user" ? "text-blue-100" : "text-gray-500"
+                    msg.type === "user" ? "text-blue-100" : "text-gray-500"
                   }`}
                 >
-                  {message.timestamp.toLocaleTimeString([], {
+                  {msg.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
@@ -209,34 +237,57 @@ export const ChatInterface: React.FC = () => {
               </div>
             </div>
           )}
-
           <div ref={messagesEndRef} />
         </div>
 
         <div className="mt-auto border-t border-gray-100 p-4">
           <div className="flex items-center space-x-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message..."
-              className="flex-1 px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isLoading}
-            />
             <Button
-              onClick={isRecording ? stopRecording : startRecording}
-              variant={isRecording ? "danger" : "outline"}
+              onClick={toggleMic}
+              variant={isRecognizing ? "danger" : "outline"}
               size="md"
-              className={`p-3 ${isRecording ? "animate-pulse" : ""}`}
+              className={`p-3 ${isRecognizing ? "animate-pulse" : ""}`}
             >
-              {isRecording ? (
+              {isRecognizing ? (
                 <MicOff className="w-5 h-5" />
               ) : (
                 <Mic className="w-5 h-5" />
               )}
             </Button>
+            <div className="relative flex-1">
+              <input
+                ref={inputRef}
+                type="text"
+                value={displayValue}
+                onChange={(e) => {
+                  // Only update inputValue if the change isn't from interim transcript
+                  if (!isRecognizing) {
+                    setInputValue(e.target.value);
+                  }
+                }}
+                onKeyPress={handleKeyPress}
+                placeholder={
+                  isRecognizing ? "Listening..." : "Type your message..."
+                }
+                className={`w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  isRecognizing ? "bg-red-50 border-red-300" : ""
+                }`}
+                disabled={isLoading}
+                style={{
+                  color: interimTranscript ? "#666" : "#000",
+                }}
+              />
+              {isRecognizing && (
+                <div className="absolute right-16 top-1/2 transform -translate-y-1/2">
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-red-500 font-medium">
+                      Recording
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
             <Button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isLoading}
@@ -245,13 +296,6 @@ export const ChatInterface: React.FC = () => {
               <Send className="w-5 h-5" />
             </Button>
           </div>
-
-          {isRecording && (
-            <div className="mt-2 flex items-center justify-center space-x-2 text-red-600">
-              <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-              <span className="text-sm">Recording... Click mic to stop</span>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
