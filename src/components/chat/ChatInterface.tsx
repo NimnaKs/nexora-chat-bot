@@ -1,7 +1,7 @@
 /* src/components/ChatInterface.tsx */
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Mic, MicOff, MessageSquare, Trash2 } from "lucide-react";
+import { Send, Mic, MicOff, MessageSquare, Trash2, Globe } from "lucide-react";
 import { ChatMessage } from "../../types";
 import apiService from "../../services/api";
 import { Button } from "../ui/Button";
@@ -10,6 +10,13 @@ import { Card, CardHeader, CardContent } from "../ui/Card";
 // Browser SpeechRecognition
 const SpeechRecognition =
   (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+// Language options
+const LANGUAGE_OPTIONS = [
+  { code: "en-US", label: "English", flag: "🇺🇸" },
+  { code: "si-LK", label: "සිංහල", flag: "🇱🇰" },
+  { code: "ta-IN", label: "தமிழ்", flag: "🇱🇰", fallback: ["ta", "ta-LK"] },
+];
 
 export const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -25,15 +32,35 @@ export const ChatInterface: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isRecognizing, setIsRecognizing] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("en-US"); // Default to English
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
 
   const recognitionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowLanguageDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Initialize SpeechRecognition
   useEffect(() => {
@@ -42,7 +69,7 @@ export const ChatInterface: React.FC = () => {
     const recog = new SpeechRecognition();
     recog.continuous = true; // Enable continuous recognition
     recog.interimResults = true; // Enable interim results for real-time display
-    recog.lang = "en-US";
+    recog.lang = selectedLanguage; // Use selected language
 
     recog.onstart = () => {
       setIsRecognizing(true);
@@ -84,7 +111,7 @@ export const ChatInterface: React.FC = () => {
     };
 
     recognitionRef.current = recog;
-  }, []);
+  }, [selectedLanguage]); // Recreate when language changes
 
   const toggleMic = () => {
     if (!recognitionRef.current) return;
@@ -93,6 +120,16 @@ export const ChatInterface: React.FC = () => {
       recognitionRef.current.stop();
     } else {
       recognitionRef.current.start();
+    }
+  };
+
+  const handleLanguageChange = (langCode: string) => {
+    setSelectedLanguage(langCode);
+    setShowLanguageDropdown(false);
+
+    // Stop current recognition if active
+    if (isRecognizing && recognitionRef.current) {
+      recognitionRef.current.stop();
     }
   };
 
@@ -158,6 +195,9 @@ export const ChatInterface: React.FC = () => {
 
   // Combined display value for input (actual input + interim transcript)
   const displayValue = inputValue + interimTranscript;
+  const currentLanguage = LANGUAGE_OPTIONS.find(
+    (lang) => lang.code === selectedLanguage
+  );
 
   return (
     <Card className="h-[80vh] flex flex-col">
@@ -174,15 +214,51 @@ export const ChatInterface: React.FC = () => {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearChat}
-            className="text-gray-600 border-gray-300"
-          >
-            <Trash2 className="w-4 h-4 mr-1" />
-            Clear
-          </Button>
+          <div className="flex items-center space-x-2">
+            {/* Language Selector */}
+            <div className="relative" ref={dropdownRef}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                className="text-gray-600 border-gray-300 flex items-center space-x-2"
+              >
+                <Globe className="w-4 h-4" />
+                <span className="text-sm">
+                  {currentLanguage?.flag} {currentLanguage?.label}
+                </span>
+              </Button>
+
+              {showLanguageDropdown && (
+                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-[140px]">
+                  {LANGUAGE_OPTIONS.map((lang) => (
+                    <button
+                      key={lang.code}
+                      onClick={() => handleLanguageChange(lang.code)}
+                      className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-2 ${
+                        selectedLanguage === lang.code
+                          ? "bg-blue-50 text-blue-600"
+                          : "text-gray-700"
+                      } first:rounded-t-lg last:rounded-b-lg`}
+                    >
+                      <span>{lang.flag}</span>
+                      <span className="text-sm">{lang.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearChat}
+              className="text-gray-600 border-gray-300"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
@@ -247,6 +323,7 @@ export const ChatInterface: React.FC = () => {
               variant={isRecognizing ? "danger" : "outline"}
               size="md"
               className={`p-3 ${isRecognizing ? "animate-pulse" : ""}`}
+              title={`Voice input (${currentLanguage?.label})`}
             >
               {isRecognizing ? (
                 <MicOff className="w-5 h-5" />
@@ -267,7 +344,9 @@ export const ChatInterface: React.FC = () => {
                 }}
                 onKeyPress={handleKeyPress}
                 placeholder={
-                  isRecognizing ? "Listening..." : "Type your message..."
+                  isRecognizing
+                    ? `Listening in ${currentLanguage?.label}...`
+                    : "Type your message..."
                 }
                 className={`w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                   isRecognizing ? "bg-red-50 border-red-300" : ""
@@ -295,6 +374,13 @@ export const ChatInterface: React.FC = () => {
             >
               <Send className="w-5 h-5" />
             </Button>
+          </div>
+
+          {/* Language indicator */}
+          <div className="mt-2 text-center">
+            <span className="text-xs text-gray-500">
+              Voice language: {currentLanguage?.flag} {currentLanguage?.label}
+            </span>
           </div>
         </div>
       </CardContent>
