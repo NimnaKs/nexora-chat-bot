@@ -12,6 +12,12 @@ from utils.chatbot import ChatBot
 from config import Config
 import jwt
 from functools import wraps
+from flask import Flask, request, jsonify
+from functools import wraps
+from werkzeug.utils import secure_filename
+from datetime import datetime
+import speech_recognition as sr
+from pydub import AudioSegment
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -241,27 +247,43 @@ def ask_question():
 @app.route('/api/chat/voice-to-text', methods=['POST'])
 @token_required
 def voice_to_text():
+    print("Received voice-to-text request")  # Debugging line
+    if 'audio' not in request.files:
+        return jsonify({'error': 'No audio file provided'}), 400
+
+    # 1. save incoming file
+    audio_file = request.files['audio']
+    orig_fn = secure_filename(audio_file.filename)
+    audio_file.save(orig_fn)
+
+    # 2. convert to 16 kHz mono WAV
+    converted_fn = f"conv_{datetime.now().timestamp()}.wav"
+    AudioSegment.from_file(orig_fn)\
+                .set_frame_rate(16000)\
+                .set_channels(1)\
+                .export(converted_fn, format="wav")
+    os.remove(orig_fn)
+
+    # 3. recognize
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(converted_fn) as src:
+        audio_data = recognizer.record(src)
+
+    lang = request.form.get('language', 'en-US')  # default English
     try:
-        if 'audio' not in request.files:
-            return jsonify({'error': 'No audio file provided'}), 400
-        
-        audio_file = request.files['audio']
-        temp_filename = f"tmp_{datetime.now().timestamp()}.wav"
-        audio_file.save(temp_filename)
-        
-        try:
-            text = chatbot.speech_to_text(temp_filename)
-            return jsonify({
-                'success': True,
-                'text': text
-            })
-        finally:
-            # Clean up temp file
-            if os.path.exists(temp_filename):
-                os.remove(temp_filename)
-                
+        text = recognizer.recognize_google(audio_data, language=lang)
+        success = True
+    except sr.UnknownValueError:
+        text = ""
+        success = True  # no words detected, but not an error
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        text = str(e)
+        success = False
+
+    # 4. cleanup
+    os.remove(converted_fn)
+
+    return jsonify({'success': success, 'text': text})
 
 @app.route('/api/chat/history', methods=['GET'])
 @token_required
