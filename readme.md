@@ -58,6 +58,10 @@ npm install
 npm run dev
 ```
 
+## Branches
+- **be**: Backend code branch containing Flask and LangChain services.
+- **fe**: Frontend code branch containing Next.js and React components.
+
 ## Team
 
 - **Chamika Dilshan** – AI Chatbot Development
