@@ -34,7 +34,7 @@ Nexora Campus Copilot is an AI‑powered assistant designed to restore reliable 
 
 ## Screenshots / Demo
 
-[📁 Screenshot & Demo Video Folder](https://drive.google.com/drive/folders/1OMj63m396VZDSudR8UlH4NB7Qbnn8VK4?usp=drive_link)
+[📁 Screenshot & Demo Video Folder](https://drive.google.com/drive/folders/1OMj63m396VZDSudR8UlH4NB7Qbnn8VK4?usp=sharing)
 
 
 ## Setup Instructions
